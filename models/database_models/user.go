@@ -1,4 +1,4 @@
-package data
+package database_model
 
 import (
 	"github.com/jinzhu/gorm"
@@ -17,9 +17,10 @@ type User struct {
 }
 
 type UserJWT struct {
-	ID   int
-	Name string
-	Date time.Time
+	ID     uint
+	Name   string
+	Date   time.Time
+	Secret string
 }
 
 func (u *UserJWT) TokenString() (tokenString string, err error)  {
@@ -28,6 +29,6 @@ func (u *UserJWT) TokenString() (tokenString string, err error)  {
 		"nbf": time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
 	})
 	//MARK: ToDo secret key
-	tokenString, err = token.SignedString("secret")
+	tokenString, err = token.SignedString(u.Secret)
 	return
 }

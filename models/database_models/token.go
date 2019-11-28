@@ -1,15 +1,17 @@
-package data
+package database_model
 
 import (
 	"github.com/jinzhu/gorm"
 	"time"
 )
 
+
 type AccessToken struct {
 	gorm.Model
 	Value     string
-	UserID    string	`gorm:"name:user_id"`
-	ExpiredIn time.Time
+	UserID    uint	`gorm:"name:user_id"`
+	ExpiredIn time.Time `gorm:"name:expired_in"`
+	User	  User `gorm:"association_foreignkey:user_id;"`
 }
 
 func (a *AccessToken) TableName() string {
@@ -19,8 +21,9 @@ func (a *AccessToken) TableName() string {
 type RefreshToken struct {
 	gorm.Model
 	Value     string
-	UserID    string	`gorm:"name:user_id"`
-	ExpiredIn time.Time
+	UserID    uint	`gorm:"name:user_id"`
+	ExpiredIn time.Time `gorm:"name:expired_in"`
+	User	  User `gorm:"association_foreignkey:user_id;"`
 }
 
 func (r *RefreshToken) TableName() string  {
