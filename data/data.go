@@ -10,42 +10,56 @@ import (
 	"os"
 	"encoding/json"
 	"github.com/jinzhu/gorm"
+	"github.com/BooksTranslateServer/services/logging"
 )
 
 var Db *gorm.DB
 
 type DBConfig struct {
-	username string
-	database string
-	password string
-	hostname string
-	port 	 int
+	Username string `json:"username"`
+	Database string `json:"database"`
+	Password string `json:"password"`
+	Hostname string `json:"hostname"`
+	Port 	 int	`json:"port"`
 }
 
 func init() {
 	var err error
-	jsonFile, err := os.Open("database_config.json")
+	defer logging.Logger.Sync()
+	jsonFile, err := os.Open("data/database_config.json")
 	if err != nil {
-		fmt.Println("Error opening json file")
+		logging.Logger.Fatal(err.Error())
 		return
 	}
 	defer jsonFile.Close()
 
-	jsonData, err := ioutil.ReadFile("database_config.json")
-	if err != nil {
-		fmt.Println("Error reading json data:", err)
+	byteValue, error := ioutil.ReadAll(jsonFile) 
+	if error != nil {
+		logging.Logger.Fatal(err.Error())
 		return
 	}
 
 	var config DBConfig
-	json.Unmarshal(jsonData, &config)
-	configString := fmt.Sprintf("dbname=%s sslmode=disable password=%s username=%s hostname=%s port=%s", config.database, config.password, config.username, config.hostname, config.port)
+	json.Unmarshal(byteValue, &config)
+	var password string
+	if config.Password != "" {
+		password = "password=" + config.Password
+	}
+	configString := fmt.Sprintf("host=%s port=%d user=%s %s dbname=%s sslmode=disable", config.Hostname, config.Port, config.Username, password, config.Database)
+	info := fmt.Sprintf("Database connection:%s", configString)
+	logging.Logger.Info(info)
 	Db, err = gorm.Open("postgres", configString)
 	if err != nil {
-		log.Fatal(err)
+		logging.Logger.Fatal(err.Error())
 		return
 	}
 	Db.AutoMigrate()
+}
+
+func ThrowError(db *gorm.DB) error {
+	err := db.Error
+	logging.Logger.Error(err.Error())
+	return err
 }
 
 // create a random UUID with from RFC 4122

@@ -1,10 +1,26 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
+	"github.com/sarulabs/di"
+	"github.com/BooksTranslateServer/services"
+	"github.com/BooksTranslateServer/services/logging"
 )
 
 func main() {
-	fmt.Println("Hello, world.")
+	defer logging.Logger.Sync()
+
+	builder, err := di.NewBuilder()
+	if err != nil {
+		logging.Logger.Fatal(err.Error())
+	}
+
+	err = builder.Add(services.Services...)
+	if err != nil {
+		logging.Logger.Fatal(err.Error())
+	}
+
+	container := builder.Build()
+	defer container.Delete()
+
+	Route(container)
 }

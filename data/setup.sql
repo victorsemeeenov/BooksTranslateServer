@@ -26,47 +26,68 @@ create table users (
     name       varchar(64) not null unique,
     email      varchar(255) not null unique,
     password   varchar(255) not null,
-    avatar_url varchar(255)
+    avatar_url varchar(255),
+    created_at timestamp not null,
+    updated_at timestamp,
+    deleted_at timestamp
 );
 
 create table access_tokens (
     id         serial primary key,
-    value      varchar(255) not null unique,
+    value      varchar(500) not null unique,
     user_id    integer references users(id),
-    expired_in timestamp not null
+    expired_in timestamp not null,
+    created_at timestamp not null,
+    updated_at timestamp,
+    deleted_at timestamp
 );
 
 create table refresh_tokens (
     id         serial primary key,
-    value      varchar(255) not null unique,
+    value      varchar(500) not null unique,
     user_id    integer references users(id),
-    expired_in timestamp not null
+    expired_in timestamp not null,
+    created_at timestamp not null,
+    updated_at timestamp,
+    deleted_at timestamp
 );
 
 create table languages (
     id    serial primary key,
-    value varchar(64) not null unique
+    value varchar(64) not null unique,
+    created_at timestamp not null,
+    updated_at timestamp,
+    deleted_at timestamp
 );
 
 create table words (
-    id                         serial primary key,
-    value                      varchar(255) not null unique,
-    transcription              varchar(255),
-    part_of_speech             varchar(64),
-    language_id                integer references languages(id)
+    id             serial primary key,
+    value          varchar(255) not null unique,
+    transcription  varchar(255),
+    part_of_speech varchar(64),
+    language_id    integer references languages(id),
+    created_at     timestamp not null,
+    updated_at     timestamp,
+    deleted_at     timestamp
 );
 
 create table translations (
     id             serial primary key,
     value          varchar(255) not null unique,
     part_of_speech varchar(64),
-    gender         varchar(32)
+    gender         varchar(32),
+    created_at     timestamp not null,
+    updated_at     timestamp,
+    deleted_at     timestamp
 );
 
 create table words_translations (
     id             serial primary key,
     word_id        integer references words(id),
-    translation_id integer references translations(id)
+    translation_id integer references translations(id),
+    created_at     timestamp not null,
+    updated_at     timestamp,
+    deleted_at     timestamp
 );
 
 create index word_index on words((lower(value)));
@@ -75,18 +96,27 @@ create table synonims (
     id                serial primary key,
     translation_value varchar(255) not null unique,
     part_of_speech    varchar(64),
-    gender            varchar(32)
+    gender            varchar(32),
+    created_at        timestamp not null,
+    updated_at        timestamp,
+    deleted_at        timestamp
 );
 
 create table words_synonims (
     id         serial primary key,
     word_id    integer references words(id),
-    synonim_id integer references synonims(id)
+    synonim_id integer references synonims(id),
+    created_at timestamp not null,
+    updated_at timestamp,
+    deleted_at timestamp
 );
 
 create table book_categories (
-    id    serial primary key,
-    value varchar(255) not null unique
+    id         serial primary key,
+    value      varchar(255) not null unique,
+    created_at timestamp not null,
+    updated_at timestamp,
+    deleted_at timestamp
 );
 
 create table books (
@@ -95,7 +125,10 @@ create table books (
     number_of_pages  integer,
     year             integer,
     url              varchar (255) not null unique,
-    book_category_id integer references book_categories(id)
+    book_category_id integer references book_categories(id),
+    created_at       timestamp not null,
+    updated_at       timestamp,
+    deleted_at       timestamp
 );
 
 create table chapters (
@@ -103,18 +136,23 @@ create table chapters (
     title        varchar (255),
     order_number integer,
     order_value  varchar (255),
-    book_id      integer references books(id)
+    book_id      integer references books(id),
+    created_at   timestamp not null,
+    updated_at   timestamp,
+    deleted_at   timestamp
 );
 
 create index chapter_index on chapters(order_number);
 
 create table sentences (
     id           serial primary key,
-    value        text,
+    value        text unique,
     order_number integer,
     chapter_id   integer references chapters(id),
     language_id  integer references languages(id),
-    unique(value)
+    created_at   timestamp not null,
+    updated_at   timestamp,
+    deleted_at   timestamp
 );
 
 create index sentence_index on sentences(order_number);
@@ -122,23 +160,35 @@ create index sentence_index on sentences(order_number);
 create table words_sentences (
     id          serial primary key,
     word_id     integer references words(id),
-    sentence_id integer references sentences(id)
+    sentence_id integer references sentences(id),
+    created_at  timestamp not null,
+    updated_at  timestamp,
+    deleted_at  timestamp
 );
 
 create table sentence_translations (
     id          serial primary key,
     sentence_id integer references sentences(id),
-    value       varchar(255)
+    value       varchar(255),
+    created_at  timestamp not null,
+    updated_at  timestamp,
+    deleted_at  timestamp
 );
 
 create table authors (
-    id   serial primary key,
-    name varchar (255)
+    id         serial primary key,
+    name       varchar (255),
+    created_at timestamp not null,
+    updated_at timestamp,
+    deleted_at timestamp
 );
 
 create table books_authors (
-    id        serial primary key,
-    book_id   integer references books(id),
-    author_id integer references authors(id)
+    id         serial primary key,
+    book_id    integer references books(id),
+    author_id  integer references authors(id),
+    created_at timestamp not null,
+    updated_at timestamp,
+    deleted_at timestamp
 );
 
