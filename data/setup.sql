@@ -192,3 +192,9 @@ create table books_authors (
     deleted_at timestamp
 );
 
+create table books_languages (
+    id          serail primary key,
+    book_id     integer references books(id),
+    language_id integer references languages(id)
+);
+

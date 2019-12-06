@@ -6,41 +6,33 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"log"
-	"io/ioutil"
-	"os"
-	"encoding/json"
 	"github.com/jinzhu/gorm"
 	"github.com/BooksTranslateServer/services/logging"
+	cfg "github.com/BooksTranslateServer/config"
+	"github.com/BooksTranslateServer/models/database"
 )
 
 var Db *gorm.DB
 
-type DBConfig struct {
-	Username string `json:"username"`
-	Database string `json:"database"`
-	Password string `json:"password"`
-	Hostname string `json:"hostname"`
-	Port 	 int	`json:"port"`
+func init() {
+	InitWithConfig(cfg.DEBUG)
 }
 
-func init() {
+func InitWithConfig(c string){
 	var err error
 	defer logging.Logger.Sync()
-	jsonFile, err := os.Open("data/database_config.json")
-	if err != nil {
-		logging.Logger.Fatal(err.Error())
-		return
+	var config cfg.DBConfig
+	switch c {
+	case cfg.DEBUG:
+		config.GetDebug()
+		break
+	case cfg.TEST:
+		config.GetTest()
+		break
 	}
-	defer jsonFile.Close()
-
-	byteValue, error := ioutil.ReadAll(jsonFile) 
-	if error != nil {
-		logging.Logger.Fatal(err.Error())
-		return
+	if c == cfg.DEBUG {
+		config.GetDebug()
 	}
-
-	var config DBConfig
-	json.Unmarshal(byteValue, &config)
 	var password string
 	if config.Password != "" {
 		password = "password=" + config.Password
@@ -53,7 +45,45 @@ func init() {
 		logging.Logger.Fatal(err.Error())
 		return
 	}
-	Db.AutoMigrate()
+	Db.AutoMigrate(&database.AccessToken{},
+				   &database.Author{},
+				   &database.Book{}, 
+				   &database.BookAuthor{},
+				   &database.BookCategory{},
+				   &database.Chapter{},
+				   &database.Language{},
+				   &database.RefreshToken{},
+				   &database.Sentence{},
+				   &database.SentenceTranslation{},
+				   &database.Synonim{},
+				   &database.Translation{},
+				   &database.User{},
+				   &database.UserJWT{},
+				   &database.Word{},
+				   &database.WordSentence{},
+				   &database.WordSynonim{},
+				   &database.WordTranslation{})
+}
+
+func RemoveAll() {
+	Db.Delete(&database.AccessToken{})
+	Db.Delete(&database.Author{})
+	Db.Delete(&database.Book{})
+	Db.Delete(&database.BookAuthor{})
+	Db.Delete(&database.BookCategory{})
+	Db.Delete(&database.Chapter{})
+	Db.Delete(&database.Language{})
+	Db.Delete(&database.RefreshToken{})
+	Db.Delete(&database.Sentence{})
+	Db.Delete(&database.SentenceTranslation{})
+	Db.Delete(&database.Synonim{})
+	Db.Delete(&database.Translation{})
+	Db.Delete(&database.User{})
+	Db.Delete(&database.UserJWT{})
+	Db.Delete(&database.Word{})
+	Db.Delete(&database.WordSentence{})
+	Db.Delete(&database.WordSynonim{})
+	Db.Delete(&database.WordTranslation{})
 }
 
 func ThrowError(db *gorm.DB) error {
