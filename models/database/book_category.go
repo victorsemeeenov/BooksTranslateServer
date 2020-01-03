@@ -6,7 +6,7 @@ import (
 
 type BookCategory struct {
 	gorm.Model
-	Value string
+	Name string
 }
 
 func (b *BookCategory) TableName() string  {

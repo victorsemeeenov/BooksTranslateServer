@@ -11,7 +11,7 @@ type Word struct {
 	PartOfSpeech  string 		 `gorm:"name:part_of_speech"`
 	LanguageID	  int 	 		 `gorm:"name:language_id"`
 	Translations  []*Translation `gorm:"many2many:words_translations"`
-	Language      Language		 `gorm:"associated_foreignkey:language_id"`
+	Language      Language		 `gorm:"associated_foreignkey:LanguageID"`
 	Sentences	  []*Sentence    `gorm:"many2many:words_sentences"`
 	Synonims 	  []*Synonim	 `gorm:"many2many:words_synonims"`
 }

@@ -34,5 +34,4 @@ func TestWordTranslation(t *testing.T) {
 		TranslateStorage: translate_storage.TranslateDB{},
 		BookService: book.BookService{},
 	}
-	translationService.TranslateWord("hello")
 }

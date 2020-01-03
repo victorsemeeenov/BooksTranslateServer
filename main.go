@@ -4,6 +4,7 @@ import (
 	"github.com/sarulabs/di"
 	"github.com/BooksTranslateServer/services"
 	"github.com/BooksTranslateServer/services/logging"
+	"github.com/BooksTranslateServer/data"
 )
 
 func main() {
@@ -21,6 +22,7 @@ func main() {
 
 	container := builder.Build()
 	defer container.Delete()
+	admin := data.RegisterAdmin()
 
-	Route(container)
+	Route(container, admin)
 }

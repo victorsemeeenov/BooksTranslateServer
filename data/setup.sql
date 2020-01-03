@@ -16,6 +16,8 @@ drop table if exists sentence_translations CASCADE;
 drop table if exists synonims CASCADE;
 drop table if exists words_synonims CASCADE;
 drop table if exists book_categories CASCADE;
+drop table if exists users_words CASCADE;
+drop table if exists books_languages CASCADE;
 drop index if exists sentence_index;
 drop index if exists chapter_index;
 drop index if exists word_index;
@@ -27,7 +29,7 @@ create table users (
     email      varchar(255) not null unique,
     password   varchar(255) not null,
     avatar_url varchar(255),
-    created_at timestamp not null,
+    created_at timestamp,
     updated_at timestamp,
     deleted_at timestamp
 );
@@ -37,7 +39,7 @@ create table access_tokens (
     value      varchar(500) not null unique,
     user_id    integer references users(id),
     expired_in timestamp not null,
-    created_at timestamp not null,
+    created_at timestamp,
     updated_at timestamp,
     deleted_at timestamp
 );
@@ -47,7 +49,7 @@ create table refresh_tokens (
     value      varchar(500) not null unique,
     user_id    integer references users(id),
     expired_in timestamp not null,
-    created_at timestamp not null,
+    created_at timestamp,
     updated_at timestamp,
     deleted_at timestamp
 );
@@ -55,7 +57,7 @@ create table refresh_tokens (
 create table languages (
     id    serial primary key,
     value varchar(64) not null unique,
-    created_at timestamp not null,
+    created_at timestamp,
     updated_at timestamp,
     deleted_at timestamp
 );
@@ -66,7 +68,7 @@ create table words (
     transcription  varchar(255),
     part_of_speech varchar(64),
     language_id    integer references languages(id),
-    created_at     timestamp not null,
+    created_at     timestamp,
     updated_at     timestamp,
     deleted_at     timestamp
 );
@@ -76,7 +78,7 @@ create table translations (
     value          varchar(255) not null unique,
     part_of_speech varchar(64),
     gender         varchar(32),
-    created_at     timestamp not null,
+    created_at     timestamp,
     updated_at     timestamp,
     deleted_at     timestamp
 );
@@ -85,7 +87,7 @@ create table words_translations (
     id             serial primary key,
     word_id        integer references words(id),
     translation_id integer references translations(id),
-    created_at     timestamp not null,
+    created_at     timestamp,
     updated_at     timestamp,
     deleted_at     timestamp
 );
@@ -97,7 +99,7 @@ create table synonims (
     translation_value varchar(255) not null unique,
     part_of_speech    varchar(64),
     gender            varchar(32),
-    created_at        timestamp not null,
+    created_at        timestamp,
     updated_at        timestamp,
     deleted_at        timestamp
 );
@@ -106,15 +108,15 @@ create table words_synonims (
     id         serial primary key,
     word_id    integer references words(id),
     synonim_id integer references synonims(id),
-    created_at timestamp not null,
+    created_at timestamp,
     updated_at timestamp,
     deleted_at timestamp
 );
 
 create table book_categories (
     id         serial primary key,
-    value      varchar(255) not null unique,
-    created_at timestamp not null,
+    name       varchar(255) not null unique,
+    created_at timestamp,
     updated_at timestamp,
     deleted_at timestamp
 );
@@ -124,9 +126,9 @@ create table books (
     name             varchar (255) not null,
     number_of_pages  integer,
     year             integer,
-    url              varchar (255) not null unique,
+    url              varchar (255) not null,
     book_category_id integer references book_categories(id),
-    created_at       timestamp not null,
+    created_at       timestamp,
     updated_at       timestamp,
     deleted_at       timestamp
 );
@@ -137,7 +139,7 @@ create table chapters (
     order_number integer,
     order_value  varchar (255),
     book_id      integer references books(id),
-    created_at   timestamp not null,
+    created_at   timestamp,
     updated_at   timestamp,
     deleted_at   timestamp
 );
@@ -150,7 +152,7 @@ create table sentences (
     order_number integer,
     chapter_id   integer references chapters(id),
     language_id  integer references languages(id),
-    created_at   timestamp not null,
+    created_at   timestamp,
     updated_at   timestamp,
     deleted_at   timestamp
 );
@@ -161,7 +163,7 @@ create table words_sentences (
     id          serial primary key,
     word_id     integer references words(id),
     sentence_id integer references sentences(id),
-    created_at  timestamp not null,
+    created_at  timestamp,
     updated_at  timestamp,
     deleted_at  timestamp
 );
@@ -170,31 +172,36 @@ create table sentence_translations (
     id          serial primary key,
     sentence_id integer references sentences(id),
     value       varchar(255),
-    created_at  timestamp not null,
+    created_at  timestamp,
     updated_at  timestamp,
     deleted_at  timestamp
 );
 
 create table authors (
-    id         serial primary key,
-    name       varchar (255),
-    created_at timestamp not null,
-    updated_at timestamp,
-    deleted_at timestamp
+    id               serial primary key,
+    name             varchar (255),
+    created_at       timestamp,
+    updated_at       timestamp,
+    deleted_at       timestamp
 );
 
 create table books_authors (
     id         serial primary key,
     book_id    integer references books(id),
     author_id  integer references authors(id),
-    created_at timestamp not null,
+    created_at timestamp,
     updated_at timestamp,
     deleted_at timestamp
 );
 
 create table books_languages (
-    id          serail primary key,
+    id          serial primary key,
     book_id     integer references books(id),
     language_id integer references languages(id)
 );
 
+create table users_words (
+    id      serial primary key,
+    user_id integer references users(id),
+    word_id integer references words(id)
+);

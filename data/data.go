@@ -4,12 +4,15 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"fmt"
-	_ "github.com/lib/pq"
-	"log"
-	"github.com/jinzhu/gorm"
-	"github.com/BooksTranslateServer/services/logging"
 	cfg "github.com/BooksTranslateServer/config"
 	"github.com/BooksTranslateServer/models/database"
+	"github.com/BooksTranslateServer/services/logging"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/qor/admin"
+	"github.com/qor/qor"
+	"github.com/qor/qor/resource"
+	"log"
 )
 
 var Db *gorm.DB
@@ -18,7 +21,7 @@ func init() {
 	InitWithConfig(cfg.DEBUG)
 }
 
-func InitWithConfig(c string){
+func InitWithConfig(c string) {
 	var err error
 	defer logging.Logger.Sync()
 	var config cfg.DBConfig
@@ -45,24 +48,25 @@ func InitWithConfig(c string){
 		logging.Logger.Fatal(err.Error())
 		return
 	}
-	Db.AutoMigrate(&database.AccessToken{},
-				   &database.Author{},
-				   &database.Book{}, 
-				   &database.BookAuthor{},
-				   &database.BookCategory{},
-				   &database.Chapter{},
-				   &database.Language{},
-				   &database.RefreshToken{},
-				   &database.Sentence{},
-				   &database.SentenceTranslation{},
-				   &database.Synonim{},
-				   &database.Translation{},
-				   &database.User{},
-				   &database.UserJWT{},
-				   &database.Word{},
-				   &database.WordSentence{},
-				   &database.WordSynonim{},
-				   &database.WordTranslation{})
+	Db.AutoMigrate(
+		&database.AccessToken{},
+		&database.Author{},
+		&database.Book{},
+		&database.BookAuthor{},
+		&database.BookCategory{},
+		&database.Chapter{},
+		&database.Language{},
+		&database.RefreshToken{},
+		&database.Sentence{},
+		&database.SentenceTranslation{},
+		&database.Synonim{},
+		&database.Translation{},
+		&database.User{},
+		&database.Word{},
+		&database.WordSentence{},
+		&database.WordSynonim{},
+		&database.WordTranslation{},
+	)
 }
 
 func RemoveAll() {
@@ -79,7 +83,6 @@ func RemoveAll() {
 	Db.Delete(&database.Synonim{})
 	Db.Delete(&database.Translation{})
 	Db.Delete(&database.User{})
-	Db.Delete(&database.UserJWT{})
 	Db.Delete(&database.Word{})
 	Db.Delete(&database.WordSentence{})
 	Db.Delete(&database.WordSynonim{})
@@ -90,6 +93,31 @@ func ThrowError(db *gorm.DB) error {
 	err := db.Error
 	logging.Logger.Error(err.Error())
 	return err
+}
+
+func RegisterAdmin() *admin.Admin {
+	db := fmt.Sprintf("%v", Db)
+	logging.Logger.Debug(db)
+	adm := admin.New(&admin.AdminConfig{SiteName:"Admin", DB:Db})
+	adm.AddResource(&database.Author{})
+	book := adm.AddResource(&database.Book{})
+	adm.AddResource(&database.BookAuthor{})
+	adm.AddResource(&database.BookCategory{})
+	book.Meta(&admin.Meta{Name:"NumberOfPages", Type:"readonly"})
+	book.Meta(&admin.Meta{Name:"URL", Type:"hidden"})
+	book.Meta(&admin.Meta{Name:"BookCategoryID", Type:"readonly"})
+	book.Meta(&admin.Meta{Name:"BookFile",
+		                  Type:"file_picker",
+		                  Valuer: func(interface{}, *qor.Context) interface{} { return "" },
+		                  Setter: func(record interface{}, metaValue *resource.MetaValue, context *qor.Context) {
+							_, _, err := context.Request.FormFile("BookFile")
+							if err != nil {
+								logging.Logger.Error("Cant load file!!!")
+								return
+							}
+							logging.Logger.Info("File loaded!!!!")
+						  }})
+	return adm
 }
 
 // create a random UUID with from RFC 4122

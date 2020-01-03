@@ -11,7 +11,7 @@ type AccessToken struct {
 	Value     string
 	UserID    uint	`gorm:"name:user_id"`
 	ExpiredIn time.Time `gorm:"name:expired_in"`
-	User	  User `gorm:"association_foreignkey:user_id;"`
+	User	  User `gorm:"associated_foreignkey:UserID;"`
 }
 
 func (a *AccessToken) TableName() string {
@@ -23,7 +23,7 @@ type RefreshToken struct {
 	Value     string
 	UserID    uint	`gorm:"name:user_id"`
 	ExpiredIn time.Time `gorm:"name:expired_in"`
-	User	  User `gorm:"association_foreignkey:user_id;"`
+	User	  User `gorm:"associated_foreignkey:UserID;"`
 }
 
 func (r *RefreshToken) TableName() string  {

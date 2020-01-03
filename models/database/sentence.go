@@ -10,7 +10,7 @@ type Sentence struct {
 	OrderNumber int 	 `gorm:"name:order_number"`
 	ChapterID   int 	 `gorm:"name:chapter_id"`
 	LanguageID  int 	 `gorm:"name:language_id"`
-	Chapter		Chapter  `gorm:"association_foreignkey:chapter_id;"` 
-	Language	Language `gorm:"association_foreignkey:language_id;"`
+	Chapter		Chapter  `gorm:"associated_foreignkey:ChapterID;"`
+	Language	Language `gorm:"associated_foreignkey:LanguageID;"`
 	Words       []*Word  `gorm:"many2many:words_sentences;"`
 }
