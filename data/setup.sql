@@ -17,7 +17,6 @@ drop table if exists synonims CASCADE;
 drop table if exists words_synonims CASCADE;
 drop table if exists book_categories CASCADE;
 drop table if exists users_words CASCADE;
-drop table if exists books_languages CASCADE;
 drop index if exists sentence_index;
 drop index if exists chapter_index;
 drop index if exists word_index;
@@ -128,6 +127,7 @@ create table books (
     year             integer,
     url              varchar (255) not null,
     book_category_id integer references book_categories(id),
+    language_id      integer references languages(id),
     created_at       timestamp,
     updated_at       timestamp,
     deleted_at       timestamp
@@ -192,12 +192,6 @@ create table books_authors (
     created_at timestamp,
     updated_at timestamp,
     deleted_at timestamp
-);
-
-create table books_languages (
-    id          serial primary key,
-    book_id     integer references books(id),
-    language_id integer references languages(id)
 );
 
 create table users_words (

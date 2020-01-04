@@ -1,62 +1,46 @@
 package book
 
 import (
+	"errors"
 	"github.com/BooksTranslateServer/data"
 	"github.com/BooksTranslateServer/models/database"
-	"os"
-	."github.com/BooksTranslateServer/utils/error"
-	"github.com/BooksTranslateServer/utils/error/types"
-	"errors"
-	"rsc.io/pdf"
-	"github.com/jinzhu/gorm"
-	"strings"
 	"github.com/BooksTranslateServer/services/logging"
+	"github.com/BooksTranslateServer/utils/error/types"
+	"os"
+	"rsc.io/pdf"
+	"strings"
+)
+
+const (
+	PDF_FILE = "application/pdf"
+	TEXT_FILE = "text/plain"
+	REGULAR_FILE = "application/octet-stream"
 )
 
 type BookService struct {}
 
-func (b BookService) LoadBook(bytes []byte, extension string, name string, year int, bookCategoryID int, authorID int, languageID int, callback func(*database.Book, error)) {
+func (b BookService) LoadBook(bytes []byte, extension string, name string) (*os.File, error) {
 	switch extension {
-	case "pdf":
-		loadPdfBook(bytes, name, year, bookCategoryID, authorID, languageID, callback)
-		break
-	case "txt":
-		
-		break
+	case PDF_FILE:
+		return createFile(bytes, name, "pdf")
+	case TEXT_FILE:
+		return createFile(bytes, name, "txt")
+	case REGULAR_FILE:
+		return createFile(bytes, name, "")
 	default:
-		callback(nil, errors.New(types.CANT_LOAD_BOOK_EXTENSION))
+		return nil, errors.New(types.CANT_LOAD_BOOK_EXTENSION)
 	}
 }
 
-func loadPdfBook(bytes []byte, name string, year int, bookCategoryID int, authorID int, languageID int, callback func(*database.Book, error)) {
-	_, err := createFile(bytes, name, "pdf")
-	if err != nil {
-		callback(nil,err)
-		return
-	}
-	bookName := name + "." + "pdf"
-	tx := data.Db.Begin()
-	dbBook := database.Book {
-		Name: name,
-		Year: year, 
-		URL: "books/" + bookName,
-		BookCategoryID: bookCategoryID,
-	}
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		} else {
-			tx.Commit()
-		}
-	}()
-	err = Throw(tx.Create(&dbBook))
-	err = readPdf(name + "." + "pdf", tx, dbBook.ID, languageID)
-	if err != nil {
-		callback(nil, err)
+func (b BookService) CreateSentences(bookID int, fileURL string, languageID int) (error) {
+	if strings.HasSuffix(fileURL, "pdf") {
+		return readPdf(fileURL, uint(bookID), languageID)
+	} else {
+		return readPlainText(fileURL, uint(bookID), languageID)
 	}
 }
 
-func readPdf(path string, tx *gorm.DB, bookID uint, langID int) (error) {
+func readPdf(path string, bookID uint, langID int) (error) {
 	reader, err := pdf.Open(path)
 	if err != nil {
 		return err
@@ -68,8 +52,8 @@ func readPdf(path string, tx *gorm.DB, bookID uint, langID int) (error) {
 	}
 	for index := 0; index < numPage; index++ {
 		page := reader.Page(index)
-		//MARK: ToDo
-		errs := saveSentences(page, tx, 0, langID)
+		//MARK: TODO
+		errs := saveSentences(page, 0, langID)
 		for _, err := range errs {
 			logging.Logger.Error(err.Error())
 		}
@@ -77,7 +61,11 @@ func readPdf(path string, tx *gorm.DB, bookID uint, langID int) (error) {
 	return nil
 }
 
-func saveSentences(page pdf.Page, tx *gorm.DB, chapterID int, langID int) []error {
+func readPlainText(path string, bookID uint, langID int) (error) {
+	return errors.New(types.CANT_LOAD_BOOK_EXTENSION)
+}
+
+func saveSentences(page pdf.Page, chapterID int, langID int) []error {
 	var errs []error
 	textArray := page.Content().Text
 	var stringArray []string 
@@ -148,7 +136,12 @@ func addChapterToDb(ol pdf.Outline, orderIndex int, prefixOrderValue string, boo
 }
 
 func createFile(bytes []byte, name string, extension string) (*os.File, error) {
-	filename := name + "." + extension
+	var filename string
+	if extension != "" {
+		filename = name + "." + extension
+	} else {
+		filename = name
+	}
 	if _, err := os.Open(filename); err == nil {
 		return nil, errors.New(types.CANT_CREATE_BOOK_WITH_THIS_NAME)
 	}

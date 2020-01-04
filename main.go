@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/BooksTranslateServer/services/book"
 	"github.com/sarulabs/di"
 	"github.com/BooksTranslateServer/services"
 	"github.com/BooksTranslateServer/services/logging"
@@ -22,7 +23,6 @@ func main() {
 
 	container := builder.Build()
 	defer container.Delete()
-	admin := data.RegisterAdmin()
-
+	admin := data.RegisterAdmin(container.Get("book").(book.Book))
 	Route(container, admin)
 }

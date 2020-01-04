@@ -1,16 +1,26 @@
 package database
 
 import (
+	//"github.com/BooksTranslateServer/services/book"
 	"github.com/jinzhu/gorm"
 )
 
 type Book struct {
 	gorm.Model
-	Name 		   string
+	Name 		   		 string
 	NumberOfPages  int `gorm:"name:number_of_pages"`
-    Year 		   int
-    URL 		   string `gorm:"name:url"`
+	Year 		   		 int
+	URL 		   		 string `gorm:"name:url"`
+	LanguageID 		 int `gorm:"name:language_id"`
 	BookCategoryID int `gorm:"name:book_category_id"`
 	BookCategory   BookCategory `gorm:"associated_foreignkey:BookCategoryID;"`
-	Authors		   []*Author	`gorm:"many2many:books_authors;"`
+	Authors		   	 []*Author	`gorm:"many2many:books_authors;"`
+	Language	     Language `gorm:"associated_foreignkey:LanguageID;"`
+}
+
+func (b *Book) AfterCreate(scope *gorm.Scope) (err error) {
+	if b.URL != "" {
+		book.BookService{}.CreateSentences(int(b.ID), b.URL, b.LanguageID)
+	}
+	return
 }
