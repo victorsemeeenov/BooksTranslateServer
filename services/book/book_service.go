@@ -6,8 +6,8 @@ import (
 	"github.com/BooksTranslateServer/models/database"
 	"github.com/BooksTranslateServer/services/logging"
 	"github.com/BooksTranslateServer/utils/error/types"
+	"github.com/ledongthuc/pdf"
 	"os"
-	"rsc.io/pdf"
 	"strings"
 )
 
@@ -19,7 +19,7 @@ const (
 
 type BookService struct {}
 
-func (b BookService) LoadBook(bytes []byte, extension string, name string) (*os.File, error) {
+func (b BookService) LoadBook(bytes []byte, extension string, name string) (*os.File, *string, error) {
 	switch extension {
 	case PDF_FILE:
 		return createFile(bytes, name, "pdf")
@@ -28,7 +28,7 @@ func (b BookService) LoadBook(bytes []byte, extension string, name string) (*os.
 	case REGULAR_FILE:
 		return createFile(bytes, name, "")
 	default:
-		return nil, errors.New(types.CANT_LOAD_BOOK_EXTENSION)
+		return nil, nil, errors.New(types.CANT_LOAD_BOOK_EXTENSION)
 	}
 }
 
@@ -41,7 +41,7 @@ func (b BookService) CreateSentences(bookID int, fileURL string, languageID int)
 }
 
 func readPdf(path string, bookID uint, langID int) (error) {
-	reader, err := pdf.Open(path)
+	_, reader, err := pdf.Open(path)
 	if err != nil {
 		return err
 	}
@@ -52,8 +52,11 @@ func readPdf(path string, bookID uint, langID int) (error) {
 	}
 	for index := 0; index < numPage; index++ {
 		page := reader.Page(index)
+		if page.V.IsNull() {
+			continue
+		}
 		//MARK: TODO
-		errs := saveSentences(page, 0, langID)
+		errs := savePdfSentences(page, 0, langID)
 		for _, err := range errs {
 			logging.Logger.Error(err.Error())
 		}
@@ -65,7 +68,7 @@ func readPlainText(path string, bookID uint, langID int) (error) {
 	return errors.New(types.CANT_LOAD_BOOK_EXTENSION)
 }
 
-func saveSentences(page pdf.Page, chapterID int, langID int) []error {
+func savePdfSentences(page pdf.Page, chapterID int, langID int) []error {
 	var errs []error
 	textArray := page.Content().Text
 	var stringArray []string 
@@ -135,23 +138,17 @@ func addChapterToDb(ol pdf.Outline, orderIndex int, prefixOrderValue string, boo
 	return errs
 }
 
-func createFile(bytes []byte, name string, extension string) (*os.File, error) {
-	var filename string
-	if extension != "" {
-		filename = name + "." + extension
-	} else {
-		filename = name
+func createFile(bytes []byte, name string, extension string) (*os.File, *string, error) {
+	if _, err := os.Open(name); err == nil {
+		return nil, nil, errors.New(types.CANT_CREATE_BOOK_WITH_THIS_NAME)
 	}
-	if _, err := os.Open(filename); err == nil {
-		return nil, errors.New(types.CANT_CREATE_BOOK_WITH_THIS_NAME)
-	}
-	file, err := os.Create("text.txt")
+	file, err := os.Create(name)
     if err != nil {
-        return nil, err
+        return nil, nil, err
     }
     defer file.Close()
 	file.Write(bytes)
-	return file, nil
+	return file, &name, nil
 }
 
 func (b BookService) GetSentence(bookID int, chapterIndex int, sentenceIndex int, callback func(*database.Sentence, error))  {

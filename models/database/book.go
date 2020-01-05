@@ -1,7 +1,6 @@
 package database
 
 import (
-	//"github.com/BooksTranslateServer/services/book"
 	"github.com/jinzhu/gorm"
 )
 
@@ -16,11 +15,4 @@ type Book struct {
 	BookCategory   BookCategory `gorm:"associated_foreignkey:BookCategoryID;"`
 	Authors		   	 []*Author	`gorm:"many2many:books_authors;"`
 	Language	     Language `gorm:"associated_foreignkey:LanguageID;"`
-}
-
-func (b *Book) AfterCreate(scope *gorm.Scope) (err error) {
-	if b.URL != "" {
-		book.BookService{}.CreateSentences(int(b.ID), b.URL, b.LanguageID)
-	}
-	return
 }

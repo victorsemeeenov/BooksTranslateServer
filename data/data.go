@@ -6,15 +6,10 @@ import (
 	"fmt"
 	cfg "github.com/BooksTranslateServer/config"
 	"github.com/BooksTranslateServer/models/database"
-	//"github.com/BooksTranslateServer/services/book"
 	"github.com/BooksTranslateServer/services/logging"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/qor/admin"
-	"github.com/qor/qor"
-	"github.com/qor/qor/resource"
 	"log"
-	"mime/multipart"
 )
 
 var Db *gorm.DB
@@ -74,7 +69,7 @@ func InitWithConfig(c string) {
 func RemoveAll() {
 	Db.Delete(&database.AccessToken{})
 	Db.Delete(&database.Author{})
-	Db.Delete(&database.Book{})
+	Db.Delete(database.Book{})
 	Db.Delete(&database.BookAuthor{})
 	Db.Delete(&database.BookCategory{})
 	Db.Delete(&database.Chapter{})
@@ -95,63 +90,6 @@ func ThrowError(db *gorm.DB) error {
 	err := db.Error
 	logging.Logger.Error(err.Error())
 	return err
-}
-
-func RegisterAdmin(bookService book.Book) *admin.Admin {
-	db := fmt.Sprintf("%v", Db)
-	logging.Logger.Debug(db)
-	adm := admin.New(&admin.AdminConfig{SiteName:"Admin", DB:Db})
-	adm.AddResource(&database.Author{})
-	book := adm.AddResource(&database.Book{})
-	adm.AddResource(&database.BookAuthor{})
-	adm.AddResource(&database.BookCategory{})
-	adm.AddResource(&database.Sentence{})
-	adm.AddResource(&database.Language{})
-	book.Meta(&admin.Meta{Name:"NumberOfPages", Type:"readonly"})
-	book.Meta(&admin.Meta{Name:"URL", Type:"hidden"})
-	book.Meta(&admin.Meta{Name:"BookCategoryID", Type:"readonly"})
-	book.Meta(&admin.Meta{Name:"BookFile",
-		                  	Type:"file_picker",
-		                  	Valuer: func(interface{}, *qor.Context) interface{} { return "" },
-		                  	Setter: func(record interface{}, metaValue *resource.MetaValue, context *qor.Context) {
-							valueArray, ok := metaValue.Value.([]*multipart.FileHeader)
-							if !ok {
-								logging.Logger.Error("Cant get header from loading file")
-								return
-							}
-							if len(valueArray) < 1 {
-								logging.Logger.Error("empty header value array")
-								return
-							}
-							value := valueArray[0]
-							filename := value.Filename
-							header := value.Header
-							contentType := header.Get("Content-Type")
-							file, err := value.Open()
-							if err != nil {
-								logging.Logger.Error(err.Error())
-								return
-							}
-							defer file.Close()
-							bytes := make([]byte, value.Size)
-							_, err = file.Read(bytes)
-							if err != nil {
-								logging.Logger.Error(err.Error())
-								return
-							}
-							_, err = bookService.LoadBook(bytes, contentType, filename)
-							if err != nil {
-								logging.Logger.Error(err.Error())
-							}
-						  }})
-	return adm
-}
-
-func (b *database.Book) AfterCreate(scope *gorm.Scope) (err error) {
-	if b.URL != "" {
-		book.BookService{}.CreateSentences(int(b.ID), b.URL, b.LanguageID)
-	}
-	return
 }
 
 // create a random UUID with from RFC 4122

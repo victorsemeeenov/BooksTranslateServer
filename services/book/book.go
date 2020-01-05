@@ -6,7 +6,7 @@ import (
 )
 
 type Book interface {
-	LoadBook(bytes []byte, extension string, name string) (*os.File, error)
+	LoadBook(bytes []byte, extension string, name string) (*os.File, *string, error)
 	CreateSentences(bookID int, fileURL string, languageID int) (error)
 	GetSentence(bookID int, chapterIndex int, sentenceIndex int, callback func(*database.Sentence, error))
 }

@@ -1,11 +1,11 @@
 package main
 
 import (
-	"github.com/BooksTranslateServer/services/book"
-	"github.com/sarulabs/di"
+	"errors"
 	"github.com/BooksTranslateServer/services"
+	"github.com/BooksTranslateServer/services/adminpanel"
 	"github.com/BooksTranslateServer/services/logging"
-	"github.com/BooksTranslateServer/data"
+	"github.com/sarulabs/di"
 )
 
 func main() {
@@ -23,6 +23,11 @@ func main() {
 
 	container := builder.Build()
 	defer container.Delete()
-	admin := data.RegisterAdmin(container.Get("book").(book.Book))
-	Route(container, admin)
+	panel, ok := container.Get("adminpanel").(adminpanel.AdminPanel)
+	if !ok {
+		logging.Logger.Fatal(errors.New("cant get admin panel").Error())
+	} else {
+		admin := panel.Register()
+		Route(container, admin)
+	}
 }

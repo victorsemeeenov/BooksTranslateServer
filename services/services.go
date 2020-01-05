@@ -1,6 +1,7 @@
 package services
 
 import (
+	"github.com/BooksTranslateServer/services/adminpanel"
 	"github.com/sarulabs/di"
 	"github.com/BooksTranslateServer/services/auth"
 	"github.com/BooksTranslateServer/services/network/translate_api"
@@ -28,5 +29,12 @@ var Services = []di.Def{
 		Build: func(ctn di.Container) (interface{}, error) {
 			return book.BookService{}, nil
 		},
+	},
+	{
+			Name: "adminpanel",
+			Scope: di.App,
+			Build: func(ctn di.Container) (i interface{}, err error) {
+				return adminpanel.AdminPanel{ctn.Get("book").(book.Book)}, nil
+			},
 	},
 }
