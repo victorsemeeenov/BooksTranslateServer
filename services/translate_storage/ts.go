@@ -6,8 +6,8 @@ import (
 )
 
 type TranslateStorage interface {
-	GetWordTranslation(word string, language string, callback func (*database.Word, *database.Language, []error))
-	GetTextTranslation(text string, language string, callback func (*database.Sentence, *database.Language, []error))
-	SaveWordTranslation(res response.TranslateWord, lang database.Language, callback func (*database.Word, []error))
-	SaveSentenceTranslation(res response.TranslateSentence, lang database.Language, callback func(*database.Sentence, []error))
+	GetWordTranslation(word string, language string) ([]database.Word, error)
+	GetSentenceTranslation(sentenceID int) (*database.Sentence, error)
+	SaveWordTranslations(res response.TranslateWordList, language string) ([]database.Word, error)
+	SaveSentenceTranslation(sentenceID int,  res response.TranslateSentence, language string) (*database.Sentence, error)
 }

@@ -29,6 +29,11 @@ func (a AdminPanel) Register() *admin.Admin {
 	adm.AddResource(&database.BookCategory{})
 	adm.AddResource(&database.Sentence{})
 	adm.AddResource(&database.Language{})
+	adm.AddResource(&database.Chapter{})
+	adm.AddResource(&database.User{})
+	adm.AddResource(&database.Word{})
+	adm.AddResource(&database.Translation{})
+	adm.AddResource(&database.SentenceTranslation{})
 	book.Meta(&admin.Meta{Name:"NumberOfPages", Type:"readonly"})
 	book.Meta(&admin.Meta{Name:"URL", Type:"hidden"})
 	book.Meta(&admin.Meta{Name:"BookCategoryID", Type:"readonly"})
@@ -75,7 +80,8 @@ func (a AdminPanel) Register() *admin.Admin {
 	return adm
 }
 
-func (b *Book) AfterCreate(scope *gorm.Scope) (err error) {
+func (b *Book) AfterSave(tx *gorm.DB) (err error) {
+	tx.Commit()
 	if b.URL != "" {
 		book.BookService{}.CreateSentences(int(b.ID), b.URL, b.LanguageID)
 	}

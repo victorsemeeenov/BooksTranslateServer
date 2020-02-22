@@ -6,9 +6,9 @@ import (
 
 type Synonim struct {
 	gorm.Model
-	WordID 		 int 	 `gorm:"name:word_id"`
+	TranslationID int `gorm:"name:translation_id"`
 	Value  		 string 
 	PartOfSpeech string  `gorm:"name:part_of_speech"`
 	Gender		 string
-	Words		 []*Word `gorm:"many2many:words_synonims"`
+	Translation Translation `gorm:"associated_foreignkey:TranslationID;"`
 }

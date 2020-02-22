@@ -6,9 +6,10 @@ import (
 
 type Translation struct {
 	gorm.Model
-	Value 		 string
+	Value 		   string `gorm:"key:value"`
 	PartOfSpeech string `gorm:"key:part_of_speech"`
-	Gender		 string
-	Words 		 []Word `gorm:many2many:words_translations`
+	Gender		 	 string
+	Synonims     []Synonim `gorm:"foreignkey:TranslationID"`
+	Words        []Word		 `gorm:"many2many:words_translations"`
 }
 

@@ -1,12 +1,10 @@
 package translation
 
 import (
-	"github.com/BooksTranslateServer/services/translate_storage"
-	"github.com/BooksTranslateServer/services/network/translate_api"
 	"github.com/BooksTranslateServer/models/database"
-	"github.com/BooksTranslateServer/models/third_api/response"
-	"github.com/BooksTranslateServer/services/logging"
 	"github.com/BooksTranslateServer/services/book"
+	"github.com/BooksTranslateServer/services/network/translate_api"
+	"github.com/BooksTranslateServer/services/translate_storage"
 )
 
 type TranslationService struct {
@@ -15,54 +13,37 @@ type TranslationService struct {
 	BookService	     book.Book
 }
 
-func (t *TranslationService) TranslateWord(word string, language string, callback func(*database.Word, error)) {
-	t.TranslateStorage.GetWordTranslation(word, language, func (dbWord *database.Word, lang *database.Language, errs []error) {
-		if len(errs) > 0 {
-			for _, err := range errs {
-				logging.Logger.Error(err.Error())
-			}
-		} 
-		if dbWord == nil {
-			t.apiWordTranslation(word, lang, callback)
-		} else {
-			callback(dbWord, nil)
-		}
-	})
+func (t *TranslationService) TranslateWord(word string, language string) ([]database.Word, error) {
+	dbWord, err := t.TranslateStorage.GetWordTranslation(word, language)
+	if err == nil && dbWord != nil {
+		return dbWord, nil
+	}
+	return t.apiWordTranslation(word, language)
 }
 
-func (t *TranslationService) apiWordTranslation(word string, language *database.Language, callback func(*database.Word, error)) {
-	t.TranslateAPI.GetWordTranslation(word, language.Value, func(rWord *response.TranslateWord, err error) {
-		if err != nil {
-			logging.Logger.Error(err.Error())
-		}
-		t.TranslateStorage.SaveWordTranslation(*rWord, *language, func(word *database.Word, errs []error){
-			callback(word, err)
-			for _, err := range errs {
-				logging.Logger.Error(err.Error())
-			}
-		})
-	})
+func (t *TranslationService) apiWordTranslation(word string, language string) ([]database.Word, error) {
+	res, err := t.TranslateAPI.GetWordTranslation(word, language)
+	if err != nil {
+		return nil, err
+	}
+	return t.TranslateStorage.SaveWordTranslations(*res, language)
 }
 
-func (t *TranslationService) TranslateSentence(sentenceIndex int, chapterIndex int, bookID int, language string, callback func(database.Sentence, error))  {
-	t.BookService.GetSentence(bookID, chapterIndex, sentenceIndex, func(sen *database.Sentence, err error) {
-		if err != nil {
-			logging.Logger.Error(err.Error())
-		}
-		callback(*sen, err)
-	})
+func (t *TranslationService) TranslateSentence(sentenceID int) (*database.Sentence, error)  {
+	sen, err := t.TranslateStorage.GetSentenceTranslation(sentenceID)
+	if err == nil && sen != nil {
+		return sen, nil
+	}
+	if sen == nil {
+		return nil, err
+	}
+	return t.apiSentenceTranslation(sen.Value, sen.Language.Value, sentenceID)
 }
 
-func (t *TranslationService) apiSentenceTranslation(text string, language *database.Language, callback func(*database.Sentence, error)) {
-	t.TranslateAPI.GetTextTranslation(text, language.Value, func(sen *response.TranslateSentence, err error) {
-		if err != nil {
-			logging.Logger.Error(err.Error())
-		}
-		t.TranslateStorage.SaveSentenceTranslation(*sen, *language, func(sentence *database.Sentence, errs []error) {
-			for _, err := range errs {
-				logging.Logger.Error(err.Error())
-			}
-			callback(sentence, err)
-		})
-	})
+func (t *TranslationService) apiSentenceTranslation(text string, language string, sentenceID int) (*database.Sentence, error) {
+	sen, err := t.TranslateAPI.GetTextTranslation(text, language)
+	if err != nil {
+		return nil, err
+	}
+	return t.TranslateStorage.SaveSentenceTranslation(sentenceID, *sen, language)
 }

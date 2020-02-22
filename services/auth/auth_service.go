@@ -101,8 +101,7 @@ func (a *AuthService) LoginUser(userRequest LoginUser) (refreshToken RefreshToke
 }
 
 func (a *AuthService) CheckToken(token string) (accessToken AccessToken, err error)  {
-	Db.Where("value = ?", token).First(&accessToken)
-	if &accessToken == nil {
+	if Db.Where("value = ?", token).First(&accessToken).RecordNotFound() {
 		err = errors.New(types.ACCESS_TOKEN_NOT_FINDED)
 		return
 	}

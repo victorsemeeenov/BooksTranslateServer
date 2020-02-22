@@ -2,13 +2,13 @@ package controllers
 
 import (
 	"errors"
-	"net/http"
 	"github.com/BooksTranslateServer/models/request"
-	"github.com/BooksTranslateServer/models/response"
+	auth2 "github.com/BooksTranslateServer/models/response/auth"
 	"github.com/BooksTranslateServer/services/auth"
 	"github.com/BooksTranslateServer/utils/error/types"
 	"github.com/gin-gonic/gin"
 	"github.com/sarulabs/di"
+	"net/http"
 )
 
 type AuthController struct{}
@@ -33,7 +33,7 @@ func (a *AuthController) Register(container di.Container) func(*gin.Context) {
 			return
 		}
 
-		response := response.CreateAuthResponse(accessToken.Value, refreshToken.Value, accessToken.ExpiredIn)
+		response := auth2.CreateAuthResponse(accessToken.Value, refreshToken.Value, accessToken.ExpiredIn)
 		c.JSON(http.StatusOK, response)
 	}
 }
@@ -57,7 +57,7 @@ func (a *AuthController) Login(container di.Container) func(*gin.Context) {
 			return
 		}
 	
-		response := response.CreateAuthResponse(accessToken.Value, refreshToken.Value, accessToken.ExpiredIn)
+		response := auth2.CreateAuthResponse(accessToken.Value, refreshToken.Value, accessToken.ExpiredIn)
 		c.JSON(http.StatusOK, response)
 	}
 }

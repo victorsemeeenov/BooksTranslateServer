@@ -1,12 +1,17 @@
 package book
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/BooksTranslateServer/data"
 	"github.com/BooksTranslateServer/models/database"
 	"github.com/BooksTranslateServer/services/logging"
 	"github.com/BooksTranslateServer/utils/error/types"
+	"github.com/cheggaaa/go-poppler"
 	"github.com/ledongthuc/pdf"
+	"io/ioutil"
 	"os"
 	"strings"
 )
@@ -18,6 +23,10 @@ const (
 )
 
 type BookService struct {}
+
+type Chapters struct {
+	values []string `json:"chapters"`
+}
 
 func (b BookService) LoadBook(bytes []byte, extension string, name string) (*os.File, *string, error) {
 	switch extension {
@@ -41,60 +50,105 @@ func (b BookService) CreateSentences(bookID int, fileURL string, languageID int)
 }
 
 func readPdf(path string, bookID uint, langID int) (error) {
-	_, reader, err := pdf.Open(path)
+	doc, err := poppler.Open(path)
 	if err != nil {
 		return err
 	}
-	numPage := reader.NumPage()
-	outline := reader.Outline()
-	for index, ol := range outline.Child {
-		addChapterToDb(ol, index, "", bookID)
+	pageCount := doc.GetNPages()
+	var errs []error
+	var orderIndex int
+	for index := 0; index < pageCount; index++ {
+		page := doc.GetPage(index)
+		text := page.Text()
+		sentences := strings.Split(text, ".")
+		errs = saveSentences(orderIndex, sentences, -1, langID, int(bookID))
+		orderIndex = orderIndex + len(sentences)
 	}
-	for index := 0; index < numPage; index++ {
-		page := reader.Page(index)
-		if page.V.IsNull() {
-			continue
-		}
-		//MARK: TODO
-		errs := savePdfSentences(page, 0, langID)
-		for _, err := range errs {
-			logging.Logger.Error(err.Error())
-		}
-	} 
-	return nil
+	if len(errs) > 0 {
+		return  errs[0]
+	} else {
+		return nil
+	}
 }
 
 func readPlainText(path string, bookID uint, langID int) (error) {
-	return errors.New(types.CANT_LOAD_BOOK_EXTENSION)
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		logging.Logger.Error(err.Error())
+		return err
+	}
+	allText := string(data)
+	if textCmptns := strings.Split(allText, "==="); len(textCmptns) > 1 {
+		var result map[string][]interface{}
+		jsonObject := textCmptns[0]
+		buffer := new(bytes.Buffer)
+		if err := json.Compact(buffer, []byte(jsonObject)); err != nil {
+			logging.Logger.Error(err.Error())
+			return err
+		}
+		text := textCmptns[1]
+		textComponents := strings.Split(text, "---")
+		err := json.Unmarshal(buffer.Bytes(), &result)
+		if err != nil {
+			return err
+		}
+		chapters := result["chapters"]
+		if len(textComponents) < len(chapters) || len(textComponents) > len(chapters) {
+			err = errors.New("Invalid text chapters count")
+			logging.Logger.Error(err.Error())
+			return err
+		}
+		var errs []error
+		for index, chapter := range chapters {
+			chapter, _ := saveChapter(chapter.(string), index, fmt.Sprint(index+1), bookID)
+			textComponent:= textComponents[index]
+			sentences := strings.Split(textComponent, ".")
+			errs = saveSentences(index, sentences, int(chapter.ID), langID, int(bookID))
+		}
+		if len(errs) > 0 {
+			err = errs[0]
+		}
+		return err
+	} else {
+		err = errors.New("Doesnt have chapters!!!")
+		logging.Logger.Error(err.Error())
+		return err
+	}
+	return err
 }
 
-func savePdfSentences(page pdf.Page, chapterID int, langID int) []error {
+func saveSentences(orderIndex int, sentences []string, chapterID int, langID int, bookID int) []error {
+	orderNumber := orderIndex
 	var errs []error
-	textArray := page.Content().Text
-	var stringArray []string 
-	for _, text := range textArray {
-		stringArray = append(stringArray, text.S)
-	}
-	for _, str := range stringArray {
-		components := strings.Split(str, ".")
-		if len(components) > 0 {
-			for index, sen := range components {
-				if sen != "" {
-					dbSentence := database.Sentence {
+	if len(sentences) > 0 {
+		for _, sen := range sentences {
+			if sen != "" {
+				var dbSentence database.Sentence
+				if chapterID == -1 {
+					dbSentence = database.Sentence {
 						Value: sen,
-						OrderNumber: index,
+						BookID: bookID,
+						OrderNumber: orderNumber,
+						LanguageID: langID,
+					}
+				} else {
+					dbSentence = database.Sentence {
+						Value: sen,
+						BookID: bookID,
+						OrderNumber: orderNumber,
 						ChapterID: chapterID,
 						LanguageID: langID,
 					}
-					err := data.Db.Create(&dbSentence).Error
-					if err != nil {
-						errs = append(errs, err)
-					}
-					newErrs := addWordsToSentence(dbSentence)
-					for _, err := range newErrs {
-						errs = append(errs, err)
-					}
 				}
+				err := data.Db.Create(&dbSentence).Error
+				if err != nil {
+					errs = append(errs, err)
+				}
+				newErrs := addWordsToSentence(dbSentence)
+				for _, err := range newErrs {
+					errs = append(errs, err)
+				}
+				orderNumber ++
 			}
 		}
 	}
@@ -122,12 +176,7 @@ func addWordsToSentence(sentence database.Sentence) []error {
 func addChapterToDb(ol pdf.Outline, orderIndex int, prefixOrderValue string, bookID uint) []error {
 	var errs []error
 	newPrefixOrderValue := prefixOrderValue + string(orderIndex+1) + "."
-	err := data.Db.Create(&database.Chapter{
-		Title: ol.Title,
-		OrderNumber: orderIndex, 
-		OrderValue: newPrefixOrderValue,
-		BookID: bookID,
-	}).Error
+	_, err := saveChapter(ol.Title, orderIndex, newPrefixOrderValue, bookID)
 	errs = append(errs, err)
 	for index, outline := range ol.Child {
 		newErrs := addChapterToDb(outline, index, newPrefixOrderValue, bookID)
@@ -136,6 +185,17 @@ func addChapterToDb(ol pdf.Outline, orderIndex int, prefixOrderValue string, boo
 		}
 	}
 	return errs
+}
+
+func saveChapter(title string, orderIndex int, prefixOrderValue string, bookID uint) (database.Chapter, error) {
+	chapter := &database.Chapter{
+		Title: title,
+		OrderNumber: orderIndex,
+		OrderValue: prefixOrderValue,
+		BookID: bookID,
+	}
+	err := data.Db.Create(chapter).Error
+	return *chapter, err
 }
 
 func createFile(bytes []byte, name string, extension string) (*os.File, *string, error) {
@@ -151,6 +211,20 @@ func createFile(bytes []byte, name string, extension string) (*os.File, *string,
 	return file, &name, nil
 }
 
-func (b BookService) GetSentence(bookID int, chapterIndex int, sentenceIndex int, callback func(*database.Sentence, error))  {
-	
+func (b BookService) GetSentence(sentenceID int) (*database.Sentence, error) {
+	var sentence database.Sentence
+	err := data.Db.First(&sentence, sentenceID).Error
+	return &sentence, err
+}
+
+func (b BookService) GetBookList() ([]database.Book, error) {
+	var books []database.Book
+	err := data.Db.Find(&books).Error
+	return books, err
+}
+
+func(b BookService) GetAllSentence(bookID int) ([]database.Sentence, error) {
+	var sentences []database.Sentence
+	err := data.Db.Where("book_id = ?", bookID).Find(&sentences).Error
+	return sentences, err
 }

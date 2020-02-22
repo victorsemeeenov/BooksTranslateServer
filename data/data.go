@@ -61,8 +61,7 @@ func InitWithConfig(c string) {
 		&database.User{},
 		&database.Word{},
 		&database.WordSentence{},
-		&database.WordSynonim{},
-		&database.WordTranslation{},
+		&database.Translation{},
 	)
 }
 
@@ -82,8 +81,6 @@ func RemoveAll() {
 	Db.Delete(&database.User{})
 	Db.Delete(&database.Word{})
 	Db.Delete(&database.WordSentence{})
-	Db.Delete(&database.WordSynonim{})
-	Db.Delete(&database.WordTranslation{})
 }
 
 func ThrowError(db *gorm.DB) error {

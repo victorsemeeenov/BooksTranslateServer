@@ -1,12 +1,11 @@
 package translate_api
 
 import (
-	"github.com/go-resty/resty"
-	"github.com/BooksTranslateServer/models/third_api/response"
-	"github.com/BooksTranslateServer/services/network"
-	"github.com/BooksTranslateServer/models/third_api/request"
 	"encoding/json"
 	"github.com/BooksTranslateServer/config"
+	"github.com/BooksTranslateServer/models/third_api/response"
+	"github.com/BooksTranslateServer/services/network"
+	"strings"
 )
 
 //MARK: Base urls
@@ -34,48 +33,39 @@ func GetYandexService() YandexService {
 }
 
 func (y YandexService) GetWordTranslation(word string,
-										   lang string,
-										   callback func (*response.TranslateWord, error)) {
-	body := []byte(request.TranslateWord{
-		Key: y.YandexTranslateAPIKey,
-		Lang: lang,
-		Text: word,
-		UI: "ru",
-		Flags: 2,
-	}.
-	QueryString())
-	network.PostRequest(TRANSLATE_WORD,
-						map[string]string{},
-						body,
-						func (res *resty.Response, err error) {
-							if err != nil {
-								callback(nil, err)
-							}
-							var translateWord response.TranslateWord
-							err = json.Unmarshal(res.Body(), &translateWord)
-							callback(&translateWord, err)
-						})
+										   lang string) (*response.TranslateWordList, error) {
+	res, err := network.GetRequest(TRANSLATE_WORD, nil, map[string]string{
+		"key": y.YandexDictApiKey,
+		"lang": lang + "-" + "ru",
+		"text": word,
+		"ui": "ru",
+		"flags": "2",
+	})
+	if err != nil {
+		return nil, err
+	}
+	translateWord, errs := response.TranslateWordFromJSON(res.Body())
+	if len(errs) > 0 {
+		return translateWord, errs[0]
+	}
+	return translateWord, nil
 } 
 
 func (y YandexService) GetTextTranslation(text string,
-										   lang string,
-							               callback func (*response.TranslateSentence, error)) {
-	body := []byte(request.TranslateText {
-		Key: y.YandexDictApiKey,
-		Text: text,
-		Lang: lang,
-	}. 
-	QueryString())
-	network.PostRequest(y.YandexTranslateAPIKey,
-						map[string]string{},
-						body,
-						func (res *resty.Response, err error) {
-							if err != nil {
-								callback (nil, err)
-							}
-							var translateSentence response.TranslateSentence
-							err = json.Unmarshal(res.Body(), &translateSentence)
-							callback(&translateSentence, err)
-						})
+										   lang string) (*response.TranslateSentence, error) {
+	res, err := network.GetRequest(TRANSLATE_TEXT, nil, map[string]string{
+		"key": y.YandexTranslateAPIKey,
+		"text": strings.ReplaceAll(text, "\n", ""),
+		"lang": "ru",
+	})
+	if err != nil {
+		return nil, err
+	}
+	var translateSentence response.TranslateSentence
+	err = json.Unmarshal(res.Body(), &translateSentence)
+	if err != nil {
+		return nil, err
+	}
+	return &translateSentence, nil
 }
 
